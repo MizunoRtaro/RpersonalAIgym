@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>パーソナルAIジム</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/TextureLoader.js"></script>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #333;
+            color: #fff;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 30px;
+            background-color: #444;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+        #model-container {
+            width: 100%;
+            height: 400px;
+            background-color: #222;
+            border-radius: 10px;
+            overflow: hidden;
+            border: 1px solid #ccc;
+            position: relative;
+        }
+        #video-container {
+            max-height: 500px;
+            overflow-y: auto;
+            padding: 10px;
+            background-color: #222;
+            border-radius: 10px;
+        }
+        h1 {
+            text-align: center;
+            color: #fff;
+        }
+        #part-selection {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #part-selection .container {
+            display: inline-block;
+            position: relative;
+            padding: 3px;
+            background: linear-gradient(90deg, #03a9f4, #f441a5);
+            border-radius: 0.9em;
+            transition: all 0.4s ease;
+            margin: 5px;
+        }
+        #part-selection .container::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            margin: auto;
+            border-radius: 0.9em;
+            z-index: -10;
+            filter: blur(0);
+            transition: filter 0.4s ease;
+        }
+        #part-selection .container:hover::before {
+            background: linear-gradient(90deg, #03a9f4, #f441a5);
+            filter: blur(1.2em);
+        }
+        #part-selection .container:active::before {
+            filter: blur(0.2em);
+        }
+        #part-selection button {
+            font-size: 1.4em;
+            padding: 0.6em 0.8em;
+            border-radius: 0.5em;
+            border: none;
+            background-color: #000;
+            color: #fff;
+            cursor: pointer;
+            box-shadow: 2px 2px 3px #000000b4;
+        }
+        button {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .toggle-switch {
+            position: relative;
+            margin-top: 10px;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+
+        .toggle-switch input[type="checkbox"] {
+            display: none;
+        }
+
+        .toggle-switch label {
+            display: inline-block;
+            width: 60px;
+            height: 30px;
+            background-color: #ccc;
+            border-radius: 15px;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-switch label::after {
+            content: '';
+            position: absolute;
+            width: 26px;
+            height: 26px;
+            border-radius: 50%;
+            background-color: white;
+            top: 2px;
+            left: 2px;
+            transition: transform 0.3s;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked + label {
+            background-color: #66bb6a;
+        }
+
+        .toggle-switch input[type="checkbox"]:checked + label::after {
+            transform: translateX(30px);
+        }
+
+        .toggle-switch span {
+            position: absolute;
+            top: 5px;
+            left: 70px;
+            color: white;
+            font-size: 14px;
+        }
+
+        /* 既存のスタイルはそのままで、以下を追加 */
+        #loading-indicator {
+            display: none;
+            text-align: center;
+            margin-top: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .video-item {
+            margin-bottom: 20px;
+            background-color: #333;
+            padding: 10px;
+            border-radius: 5px;
+        }
+
+        .video-item h3 {
+            color: #fff;
+            margin-top: 0;
+        }
+
+        #trainer-image {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 100px;
+            height: auto;
+            z-index: 1000;
+            cursor: pointer;
+        }
+
+        /* タイトル画像のスタイルを追加 */
+        .title-image {
+            display: block;
+            margin: 0 auto 20px;
+            max-width: 100%;
+            height: auto;
+        }
+
+        .welcome-message {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            font-size: 1.1em;
+            line-height: 1.6;
+            color: #fff;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+
+        .copyright {
+            text-align: center;
+            font-size: 0.8em;
+            color: #999;
+            margin-top: 20px;
+            padding: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- タイトルのh1要素を画像に置き換え -->
+        <img src="personalAIgym.png" alt="パーソナルAIジム" class="title-image">
+        
+        <!-- 歓迎メッセージを追加 -->
+        <div class="welcome-message">
+            RパーソナルAIジムへようこそ。ここではあなたにとって一番最適なトレーニングを提案します。トレーニングする場所と部位を選択してください。
+        </div>
+        
+        <div class="toggle-switch">
+            <input type="checkbox" id="background-toggle">
+            <label for="background-toggle"></label>
+            <span>GYMモード</span>
+        </div>
+        <div id="model-container"></div>
+        <div id="part-selection">
+            <div class="container">
+                <button onclick="selectExercise('stretch')">ストレッチ</button>
+            </div>
+            <div class="container">
+                <button onclick="selectExercise('cardio')">有酸素運動</button>
+            </div>
+            <div class="container">
+                <button onclick="selectExercise('core')">体幹</button>
+            </div>
+        </div>
+        <div id="video-container"></div>
+        <div id="loading-indicator">
+            <div class="spinner"></div>
+            <p>動画を読み込み中...</p>
+        </div>
+
+        <!-- コピーライト表示を追加 -->
+        <div class="copyright">
+            © Rクリエイティブラボ
+        </div>
+    </div>
+
+    <a href="trainer.html">
+        <img id="trainer-image" src="trainer.png" alt="Trainer">
+    </a>
+
+    <script>
+        let scene, camera, renderer, model;
+        let raycaster, mouse;
+        let selectedPart = null;
+
+        // 部位名の日英対応表
+        const partNames = {
+            'chest': '胸部',
+            'back': '背中',
+            'shoulders': '肩',
+            'arms': '腕',
+            'biceps': '上腕二頭筋',
+            'forearms': '前腕',
+            'abs': '腹筋',
+            'thighs': '太もも',
+            'calves': 'ふくらはぎ',
+            'hip': '臀部'
+        };
+
+        let backgroundTexture;
+        let isGymBackground = true;
+
+        const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
+
+        async function searchYouTubeVideo(query) {
+            const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&q=${encodeURIComponent(query)}&key=${YOUTUBE_API_KEY}&type=video&maxResults=5`;
+            
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.items && data.items.length > 0) {
+                    return data.items;
+                } else {
+                    console.error('動画が見つかりませんでした');
+                    return null;
+                }
+            } catch (error) {
+                console.error('YouTube APIの呼び出し中にエラーが発生しました:', error);
+                return null;
+            }
+        }
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.getElementById('model-container').appendChild(renderer.domElement);
+
+            const loader = new THREE.GLTFLoader();
+            loader.load('muscle.glb', function(gltf) {
+                model = gltf.scene;
+                // モデルの位置を調整
+                model.position.set(0, 1, 0);
+                // モデルのスケールを調整（必要に応じて）
+                model.scale.set(1.5, 1.5, 1.5);
+                scene.add(model);
+
+                // モデルの構造をコンソールに出力
+                model.traverse((object) => {
+                    console.log(object.name, object.type);
+                });
+
+                // モデルのバウンディングボックスを計算
+                const box = new THREE.Box3().setFromObject(model);
+                const center = box.getCenter(new THREE.Vector3());
+                const size = box.getSize(new THREE.Vector3());
+
+                // カメラの位置を調整
+                const maxDim = Math.max(size.x, size.y, size.z);
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                cameraZ *= 1.5; // 少し後ろに下がる
+
+                camera.position.set(0, center.y, cameraZ);
+
+                // カメラがモデルの中心を見るように設定
+                camera.lookAt(center);
+
+                // レンダラのサイズを更新
+                updateRendererSize();
+
+                // クリックイベントを追加
+                model.traverse((object) => {
+                    if (object.isMesh) {
+                        object.material.color.setHex(0xffffff);
+                        // 透明度の設定を削除
+                        // object.material.transparent = true;
+                        // object.material.opacity = 0.7;
+
+                        // クリックイベントを追加
+                        object.userData.clickable = true;
+                        object.userData.name = object.name;
+                    }
+                });
+
+                // クリックイベントのリスナーを追加
+                renderer.domElement.addEventListener('click', onMouseClick, false);
+            }, undefined, function(error) {
+                console.error(error);
+            });
+
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(0, 0, 10);
+            scene.add(light);
+
+            // 境光を追加
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            raycaster = new THREE.Raycaster();
+            mouse = new THREE.Vector2();
+
+            // クリックイベントリスナーを追加
+            document.getElementById('model-container').addEventListener('click', onModelClick, false);
+
+            // ウィンドウのリサイズイベントリスナーを追加
+            window.addEventListener('resize', onWindowResize, false);
+
+            // 背景テクスチャを読み込む
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load('GYM.png', function(texture) {
+                backgroundTexture = texture;
+                scene.background = backgroundTexture;
+            });
+
+            // ホバーイベントのリスナーを追加
+            renderer.domElement.addEventListener('mousemove', onMouseMove, false);
+
+            // トグルスイッチのイベントリスナーを追加
+            document.getElementById('background-toggle').addEventListener('change', toggleBackground);
+
+            animate();
+
+            // trainer.pngの追加
+            const trainerImage = document.createElement('img');
+            trainerImage.id = 'trainer-image';
+            trainerImage.src = 'trainer.png';
+            trainerImage.alt = 'Trainer';
+            document.body.appendChild(trainerImage);
+
+            // trainer.pngをクリックしたときの処理
+            trainerImage.addEventListener('click', function() {
+                window.location.href = 'trainer.html';
+            });
+        }
+
+        function updateRendererSize() {
+            const container = document.getElementById('model-container');
+            const width = container.clientWidth;
+            const height = container.clientHeight;
+            camera.aspect = width / height;
+            camera.updateProjectionMatrix();
+            renderer.setSize(width, height);
+        }
+
+        function onWindowResize() {
+            updateRendererSize();
+        }
+
+        function onModelClick(event) {
+            // マウス位置を正規化
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // レイキャスターを更新
+            raycaster.setFromCamera(mouse, camera);
+
+            // モデルとの交差を計算
+            const intersects = raycaster.intersectObject(model, true);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                console.log('Clicked object:', clickedObject.name);
+                selectPartByName(clickedObject.name);
+            }
+        }
+
+        async function selectPartByName(partName) {
+            console.log('部位を選択:', partName);
+            let selectedPart = partName.toLowerCase();
+
+            if (partNames.hasOwnProperty(selectedPart)) {
+                const japaneseName = partNames[selectedPart];
+                displayPartName(selectedPart, japaneseName);
+                updateModelTransparency(selectedPart);
+                
+                const mode = isGymBackground ? 'ジム' : '自宅';
+                
+                // ローディングインジケーターを表示
+                document.getElementById('loading-indicator').style.display = 'block';
+                
+                try {
+                    const query = `${japaneseName} トレーニング ${mode}`;
+                    const videos = await searchYouTubeVideo(query);
+                    if (videos && videos.length > 0) {
+                        await updateVideos(videos);
+                    } else {
+                        document.getElementById('video-container').innerHTML = '動画が見つかりませんでした。';
+                    }
+                } catch (error) {
+                    console.error('動画の取得中にエラーが発生しました:', error);
+                    document.getElementById('video-container').innerHTML = '動画の読み込み中にエラーが発生しました。';
+                } finally {
+                    // ローディングインジケーターを非表示
+                    document.getElementById('loading-indicator').style.display = 'none';
+                }
+            } else {
+                console.log('不明な部位:', partName);
+            }
+        }
+
+        function displayPartName(englishName, japaneseName) {
+            let partNameDisplay = document.getElementById('partNameDisplay');
+            if (!partNameDisplay) {
+                partNameDisplay = document.createElement('div');
+                partNameDisplay.id = 'partNameDisplay';
+                document.getElementById('model-container').appendChild(partNameDisplay);
+            }
+
+            partNameDisplay.innerHTML = `${japaneseName}<br>(${englishName})`;
+            partNameDisplay.style.position = 'absolute';
+            partNameDisplay.style.bottom = '20px';
+            partNameDisplay.style.left = '50%';
+            partNameDisplay.style.transform = 'translateX(-50%)';
+            partNameDisplay.style.backgroundColor = 'rgba(255, 255, 255, 0.8)';
+            partNameDisplay.style.color = '#333';
+            partNameDisplay.style.padding = '10px';
+            partNameDisplay.style.borderRadius = '5px';
+            partNameDisplay.style.fontFamily = 'Arial, sans-serif';
+            partNameDisplay.style.fontSize = '16px';
+            partNameDisplay.style.textAlign = 'center';
+            partNameDisplay.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+        }
+
+        function onMouseClick(event) {
+            const mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+
+            const raycaster = new THREE.Raycaster();
+            raycaster.setFromCamera(mouse, camera);
+
+            const intersects = raycaster.intersectObjects(scene.children, true);
+
+            if (intersects.length > 0) {
+                const clickedObject = intersects[0].object;
+                if (clickedObject.userData.clickable) {
+                    selectPartByName(clickedObject.userData.name);
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            if (model) {
+                model.rotation.y += 0.01;
+            }
+            renderer.render(scene, camera);
+        }
+
+        async function selectExercise(type) {
+            // ローディングインジケーターを表示
+            document.getElementById('loading-indicator').style.display = 'block';
+
+            try {
+                let query;
+                switch (type) {
+                    case 'stretch':
+                        query = 'ストレッチ 初心者';
+                        break;
+                    case 'cardio':
+                        query = '有酸素運動 自宅';
+                        break;
+                    case 'core':
+                        query = '体幹トレーニング 基本';
+                        break;
+                    default:
+                        console.log('Unknown exercise type:', type);
+                        return;
+                }
+
+                const mode = isGymBackground ? 'ジム' : '自宅';
+                query += ` ${mode}`;
+
+                const videos = await searchYouTubeVideo(query);
+                if (videos && videos.length > 0) {
+                    await updateVideos(videos);
+                } else {
+                    document.getElementById('video-container').innerHTML = '動画が見つかりませんでした。';
+                }
+            } catch (error) {
+                console.error('動画の取得中にエラーが発生しました:', error);
+                document.getElementById('video-container').innerHTML = '動画の読み込み中にエラーが発生しました。';
+            } finally {
+                // ローディングインジケーターを非表
+                document.getElementById('loading-indicator').style.display = 'none';
+            }
+        }
+
+        async function updateVideos(videos) {
+            const videoContainer = document.getElementById('video-container');
+            videoContainer.innerHTML = '';
+
+            videos.forEach((video) => {
+                const videoItem = document.createElement('div');
+                videoItem.className = 'video-item';
+
+                const title = document.createElement('h3');
+                title.textContent = video.snippet.title;
+                videoItem.appendChild(title);
+
+                const iframe = document.createElement('iframe');
+                iframe.width = '100%';
+                iframe.height = '315';
+                iframe.src = `https://www.youtube.com/embed/${video.id.videoId}`;
+                iframe.frameBorder = '0';
+                iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture';
+                iframe.allowFullscreen = true;
+
+                videoItem.appendChild(iframe);
+                videoContainer.appendChild(videoItem);
+            });
+        }
+
+        function updateModelTransparency(selectedPart) {
+            model.traverse((object) => {
+                if (object.isMesh) {
+                    if (object.name.toLowerCase() === selectedPart) {
+                        object.material.opacity = 1.0;
+                    } else {
+                        object.material.opacity = 0.5;
+                    }
+                }
+            });
+        }
+
+        function onMouseMove(event) {
+            // マウス位置を正規化
+            const rect = renderer.domElement.getBoundingClientRect();
+            mouse.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+            mouse.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+            // レイキャスターを更新
+            raycaster.setFromCamera(mouse, camera);
+
+            // モデルとの交差を計算
+            const intersects = raycaster.intersectObject(model, true);
+
+            if (intersects.length > 0) {
+                const hoveredObject = intersects[0].object;
+                displayPartName(hoveredObject.name, event.clientX, event.clientY);
+            } else {
+                hidePartName();
+            }
+        }
+
+        function displayPartName(partName, x, y) {
+            const lowercaseName = partName.toLowerCase();
+            
+            // 指定された部位以外はホバーを表示しない
+            if (!partNames.hasOwnProperty(lowercaseName)) {
+                hidePartName();
+                return;
+            }
+
+            let partNameDisplay = document.getElementById('partNameDisplay');
+            if (!partNameDisplay) {
+                partNameDisplay = document.createElement('div');
+                partNameDisplay.id = 'partNameDisplay';
+                document.body.appendChild(partNameDisplay);
+            }
+
+            const japaneseName = partNames[lowercaseName];
+
+            partNameDisplay.innerHTML = `${japaneseName}<br>(${partName})`;
+            partNameDisplay.style.position = 'fixed';
+            
+            // ツールチップの幅取得
+            const tooltipWidth = partNameDisplay.offsetWidth;
+            
+            // x座標を50%右にずらす
+            partNameDisplay.style.left = `${x + 10 + (tooltipWidth / 2)}px`;
+            
+            partNameDisplay.style.top = `${y + 10}px`;
+            partNameDisplay.style.backgroundColor = 'rgba(0, 0, 0, 0.7)';
+            partNameDisplay.style.color = '#fff';
+            partNameDisplay.style.padding = '5px 10px';
+            partNameDisplay.style.borderRadius = '5px';
+            partNameDisplay.style.fontFamily = 'Arial, sans-serif';
+            partNameDisplay.style.fontSize = '14px';
+            partNameDisplay.style.zIndex = '1000';
+            partNameDisplay.style.display = 'block';
+        }
+
+        function hidePartName() {
+            const partNameDisplay = document.getElementById('partNameDisplay');
+            if (partNameDisplay) {
+                partNameDisplay.style.display = 'none';
+            }
+        }
+
+        function toggleBackground() {
+            const textureLoader = new THREE.TextureLoader();
+            const toggleLabel = document.querySelector('.toggle-switch span');
+
+            if (isGymBackground) {
+                textureLoader.load('houseroom.png', function(texture) {
+                    backgroundTexture = texture;
+                    scene.background = backgroundTexture;
+                });
+                toggleLabel.textContent = 'Houseモード';
+            } else {
+                textureLoader.load('GYM.png', function(texture) {
+                    backgroundTexture = texture;
+                    scene.background = backgroundTexture;
+                });
+                toggleLabel.textContent = 'GYMモード';
+            }
+
+            isGymBackground = !isGymBackground;
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>

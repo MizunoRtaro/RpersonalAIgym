@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>筋肉の妖精カウンセリング</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <style>
+        @font-face {
+            font-family: 'PixelMplus12';
+            src: url('PixelMplus12-Regular.ttf') format('truetype');
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+            font-family: 'PixelMplus12', monospace;
+            overflow: hidden;
+        }
+        #game-container {
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #model-container {
+            width: 100%;
+            height: 60%;
+        }
+        #dialogue-container {
+            width: 100%;
+            height: 40%;
+            background-color: #000080;
+            border-top: 4px solid #fff;
+            padding: 20px;
+            box-sizing: border-box;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+        #dialogue-text {
+            font-size: 18px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            white-space: pre-wrap;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+        #user-input-container {
+            display: flex;
+            width: 100%;
+        }
+        #user-input {
+            flex-grow: 1;
+            padding: 10px;
+            font-size: 16px;
+            background-color: #000;
+            color: #fff;
+            border: 2px solid #fff;
+            margin-right: 10px;
+        }
+        #return-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #ff4500;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            font-family: 'PixelMplus12', monospace;
+            font-size: 16px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        #return-button:hover {
+            background-color: #ff6347;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="model-container"></div>
+        <div id="dialogue-container">
+            <div id="dialogue-text"></div>
+            <div id="user-input-container">
+                <input type="text" id="user-input" placeholder="ここに質問を入力してください..." onkeypress="handleKeyPress(event)">
+            </div>
+        </div>
+        <button id="return-button" onclick="returnToGym()">ジムに戻る</button>
+    </div>
+
+    <script>
+        let scene, camera, renderer, model;
+        let mixer, clock;
+        let currentAnimation = 'idle';
+        let animations = {};
+
+        function init() {
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / (window.innerHeight * 0.6), 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+            document.getElementById('model-container').appendChild(renderer.domElement);
+
+            clock = new THREE.Clock();
+
+            // 背景テクスチャを読み込む
+            const textureLoader = new THREE.TextureLoader();
+            textureLoader.load('妖精の部屋.png', function(texture) {
+                scene.background = texture;
+            });
+
+            const loader = new THREE.GLTFLoader();
+            Promise.all([
+                loadModel('yosei-idle.glb'),
+                loadModel('yosei-idle2.glb')
+            ]).then(([model1, model2]) => {
+                model = model1.scene;
+                model.position.set(0, -3, 0);
+                model.scale.set(3, 3, 3);
+                scene.add(model);
+
+                camera.position.set(0, 0, 5);
+                camera.lookAt(0, 0, 0);
+
+                mixer = new THREE.AnimationMixer(model);
+                animations['idle'] = model1.animations[0];
+                animations['idle2'] = model2.animations[0];
+
+                playAnimation('idle');
+
+                animate();
+                setInterval(switchAnimation, 10000); // 10秒ごとにアニメーションを切り替え
+            }).catch(error => {
+                console.error('Error loading models:', error);
+            });
+
+            const light = new THREE.PointLight(0xffffff, 1, 100);
+            light.position.set(0, 0, 10);
+            scene.add(light);
+
+            const ambientLight = new THREE.AmbientLight(0x404040);
+            scene.add(ambientLight);
+
+            window.addEventListener('resize', onWindowResize, false);
+
+            startDialogue();
+        }
+
+        function loadModel(url) {
+            return new Promise((resolve, reject) => {
+                const loader = new THREE.GLTFLoader();
+                loader.load(url, resolve, undefined, reject);
+            });
+        }
+
+        function playAnimation(name) {
+            if (mixer) {
+                mixer.stopAllAction();
+                const action = mixer.clipAction(animations[name]);
+                action.play();
+                currentAnimation = name;
+            }
+        }
+
+        function switchAnimation() {
+            const nextAnimation = currentAnimation === 'idle' ? 'idle2' : 'idle';
+            playAnimation(nextAnimation);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            
+            if (mixer) {
+                const delta = clock.getDelta();
+                mixer.update(delta);
+            }
+            renderer.render(scene, camera);
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / (window.innerHeight * 0.6);
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight * 0.6);
+        }
+
+        function startDialogue() {
+            updateDialogue("こんにちは！筋肉の妖精マッスル太郎です。トレーニングについて何か質問はありますか？");
+        }
+
+        async function updateDialogue(text) {
+            const dialogueText = document.getElementById('dialogue-text');
+            const lines = text.split('\n');
+            
+            for (let line of lines) {
+                for (let char of line) {
+                    await new Promise(resolve => setTimeout(resolve, 50)); // 各文字の表示間隔（ミリ秒）
+                    dialogueText.innerHTML += char;
+                    dialogueText.scrollTop = dialogueText.scrollHeight; // 各文字追加後にスクロール
+                }
+                dialogueText.innerHTML += '<br>'; // 行の終わりに改行を追加
+                dialogueText.scrollTop = dialogueText.scrollHeight; // 各行追加後にスクロール
+            }
+            dialogueText.innerHTML += '<br>'; // メッセージ間に空行を追加
+            dialogueText.scrollTop = dialogueText.scrollHeight; // メッセージ追加後に最終スクロール
+        }
+
+        function handleKeyPress(event) {
+            if (event.key === 'Enter') {
+                const userInput = document.getElementById('user-input').value;
+                document.getElementById('user-input').value = '';
+                handleUserInput(userInput);
+            }
+        }
+
+        async function generateResponse(input) {
+            const API_KEY = process.env.GEMINI_API_KEY; // 環境変数を使用
+            const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+            
+            const prompt = `
+                あなたは筋肉の妖精です。トレーニングや健康に関する質問に答えてください。
+                以下の点に注意して回答してください：
+                - 親しみやすく、励ましの言葉を含める
+                - 「ですます」調で話す
+                - 短い文章で、わかりやすく説明する
+                - 適切な場所で改行を入れる
+                - 絵文字を適度に使用する
+                - 回答は3〜4文程度に収める
+
+                ユーザーの質問: ${input}
+            `;
+
+            try {
+                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{ parts: [{ text: prompt }] }]
+                    })
+                });
+
+                const data = await response.json();
+                return data.candidates[0].content.parts[0].text;
+            } catch (error) {
+                console.error('Error:', error);
+                return "ごめんなさい、回答の生成中にエラーが発生しました。もう一度質問してみてください。";
+            }
+        }
+
+        async function handleUserInput(input) {
+            // ユーザーの入力を一度だけ表示
+            await updateDialogue(`YOU: ${input}`);
+            
+            // AIの応答を生成
+            const response = await generateResponse(input);
+            
+            // AIの応答のみを追加で表示
+            await updateDialogue(`マッスル太郎:\n${response}`);
+        }
+
+        function returnToGym() {
+            window.location.href = 'index.html'; // ジムのページのURLに変更してください
+        }
+
+        window.onload = init;
+    </script>
+</body>
+</html>
