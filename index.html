@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>パーソナルAIジム</title>
+    <title>RパーソナルAIジム</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/TextureLoader.js"></script>
@@ -193,6 +193,9 @@
             margin: 0 auto 20px;
             max-width: 100%;
             height: auto;
+            border: 4px solid #fff; /* 白い枠線を追加 */
+            border-radius: 15px; /* 角を丸くする */
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.5); /* 光る効果を追加 */
         }
 
         .welcome-message {
@@ -214,6 +217,14 @@
             margin-top: 20px;
             padding: 10px;
         }
+
+        #part-selection h2 {
+            color: #fff;
+            text-align: center;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
     </style>
 </head>
 <body>
@@ -223,7 +234,9 @@
         
         <!-- 歓迎メッセージを追加 -->
         <div class="welcome-message">
-            RパーソナルAIジムへようこそ。ここではあなたにとって一番最適なトレーニングを提案します。トレーニングする場所と部位を選択してください。
+            RパーソナルAIジムへようこそ。<br>
+            ここではあなたにとって一番最適なトレーニングを提案します。<br>
+            トレーニングする場所と部位を選択してください。
         </div>
         
         <div class="toggle-switch">
@@ -233,6 +246,7 @@
         </div>
         <div id="model-container"></div>
         <div id="part-selection">
+            <h2>その他トレーニングメニュー</h2>
             <div class="container">
                 <button onclick="selectExercise('stretch')">ストレッチ</button>
             </div>
