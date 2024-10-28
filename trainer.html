@@ -261,9 +261,6 @@
         }
 
         async function generateResponse(input) {
-            const API_KEY = process.env.GEMINI_API_KEY;
-            const API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
-            
             // 会話履歴を含むプロンプトを作成
             const historyPrompt = conversationHistory.map(entry => `${entry.role}: ${entry.content}`).join('\n');
             const prompt = `
@@ -283,18 +280,34 @@
             `;
 
             try {
-                const response = await fetch(`${API_URL}?key=${API_KEY}`, {
+                const response = await fetch('/api/gemini', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({
-                        contents: [{ parts: [{ text: prompt }] }]
-                    })
+                    body: JSON.stringify({ prompt }),
                 });
 
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
                 const data = await response.json();
-                return data.candidates[0].content.parts[0].text;
+                
+                // エラーチェックを追加
+                if (data.error) {
+                    console.error('Gemini API Error:', data.error);
+                    return "申し訳ありません。エラーが発生しました。もう一度質問してください。";
+                }
+
+                // レスポンスの構造を確認してから適切なデータを取得
+                if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts) {
+                    return data.candidates[0].content.parts[0].text;
+                } else {
+                    console.error('Unexpected API response structure:', data);
+                    return "申し訳ありません。応答の形式が正しくありません。もう一度質問してください。";
+                }
+
             } catch (error) {
                 console.error('Error:', error);
                 return "ごめんなさい、回答の生成中にエラーが発生しました。もう一度質問してみてください。";

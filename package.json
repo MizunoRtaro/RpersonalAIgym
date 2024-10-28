@@ -1,5 +1,13 @@
 {
+  "name": "rpersonal-aigym",
+  "version": "1.0.0",
+  "description": "AI Personal Trainer Application",
   "scripts": {
-    "build": "node build.js"
-  }
+    "build": "echo 'No build step required'",
+    "vercel-build": "echo 'Build step completed'"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.9"
+  },
+  "type": "module"
 }
